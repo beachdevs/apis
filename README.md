@@ -16,14 +16,6 @@ The installer will:
 1. Create `~/.apis/` and copy `apis.txt` there.
 2. Ask to add the `api` command to your shell profile as an alias.
 
-### Manual Installation (Alternative)
-
-### NPM Installation
-
-```bash
-npm install apis
-```
-
 ## CLI Usage
 
 The CLI looks for `~/.apis/apis.txt` first, then falls back to the one in the installation directory.
