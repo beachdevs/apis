@@ -6,7 +6,7 @@ import { fetchApi, getApi, getApis } from './fetch.js';
 import { homedir } from 'node:os';
 
 const root = dirname(fileURLToPath(import.meta.url));
-const homeTxtPath = join(homedir(), '.apidev', 'apis.txt');
+const homeTxtPath = join(homedir(), '.apis', 'apis.txt');
 const txtPath = fs.existsSync(homeTxtPath) ? homeTxtPath : join(root, 'apis.txt');
 
 const c = { dim: '\x1b[90m', cyan: '\x1b[36m', yellow: '\x1b[33m', green: '\x1b[32m', bold: '\x1b[1m', reset: '\x1b[0m' };

@@ -1,4 +1,4 @@
-# apidev
+# apis
 
 A quick and flexible API tool for calling services from the command line or as a Node.js module.
 
@@ -7,13 +7,13 @@ A quick and flexible API tool for calling services from the command line or as a
 ### Quick Install
 
 ```bash
-git clone https://github.com/beachdev/apidev.git
-cd apidev
+git clone https://github.com/beachdev/apis.git
+cd apis
 ./install.sh
 ```
 
 The installer will:
-1. Create `~/.apidev/` and copy `apis.txt` there.
+1. Create `~/.apis/` and copy `apis.txt` there.
 2. Ask to add the `api` command to your shell profile as an alias.
 
 ### Manual Installation (Alternative)
@@ -21,12 +21,12 @@ The installer will:
 ### NPM Installation
 
 ```bash
-npm install apidev
+npm install apis
 ```
 
 ## CLI Usage
 
-The CLI looks for `~/.apidev/apis.txt` first, then falls back to the one in the installation directory.
+The CLI looks for `~/.apis/apis.txt` first, then falls back to the one in the installation directory.
 
 ```bash
 # List all available APIs
@@ -56,7 +56,7 @@ api openai.chat API_KEY=$OPENAI_API_KEY MODEL=gpt-4o-mini PROMPT="Hello!"
 You can import the module to use the same logic in your own applications.
 
 ```javascript
-import { fetchApi, getRequest } from 'apidev';
+import { fetchApi, getRequest } from 'apis';
 
 // Simple usage
 const data = await fetchApi('httpbin', 'get', { simple: true });
