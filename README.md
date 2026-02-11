@@ -5,7 +5,7 @@ A quick and flexible API tool for calling services from the command line or as a
 ## Installation
 
 ```bash
-git clone https://github.com/beachdev/apis.git && cd apis && ./install.sh
+git clone https://github.com/beachdevs/apicli.git && cd apicli && ./install.sh
 ```
 
 This creates `~/.apis/` for your custom APIs and adds the `api` alias to your shell. Run `git pull` to get updates.
