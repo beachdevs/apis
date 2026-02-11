@@ -6,8 +6,8 @@ import { fetchApi, getApi, getApis } from './fetch.js';
 import { homedir } from 'node:os';
 
 const root = dirname(fileURLToPath(import.meta.url));
-const homeTxtPath = join(homedir(), '.apis', 'apis.txt');
-const txtPath = fs.existsSync(homeTxtPath) ? homeTxtPath : join(root, 'apis.txt');
+const defaultTxtPath = join(root, 'apis.txt');
+const userTxtPath = join(homedir(), '.apis', 'apis.txt');
 
 const c = { dim: '\x1b[90m', cyan: '\x1b[36m', yellow: '\x1b[33m', green: '\x1b[32m', bold: '\x1b[1m', reset: '\x1b[0m' };
 
@@ -44,15 +44,18 @@ if (arg === 'list') {
 }
 
 if (arg === 'where') {
-  console.log(txtPath);
+  console.log('default:', defaultTxtPath);
+  if (fs.existsSync(userTxtPath)) console.log('user:   ', userTxtPath);
   process.exit(0);
 }
 
 if (arg === 'help') {
-  const txt = fs.readFileSync(txtPath, 'utf8');
   const re = new RegExp(pattern.replace(/\*/g, '.*'), 'i');
-  for (const line of txt.split('\n')) {
-    if (re.test(line)) console.log(line);
+  for (const f of [defaultTxtPath, userTxtPath]) {
+    if (!fs.existsSync(f)) continue;
+    for (const line of fs.readFileSync(f, 'utf8').split('\n')) {
+      if (re.test(line)) console.log(line);
+    }
   }
   process.exit(0);
 }
@@ -87,8 +90,10 @@ if (/^\w+\.\w+$/.test(arg)) {
 }
 
 // search apis.txt
-const txt = fs.readFileSync(txtPath, 'utf8');
-const re = new RegExp(arg.replace(/\*/g, '.*'), 'i');
-for (const line of txt.split('\n')) {
-  if (re.test(line)) console.log(line);
+const re2 = new RegExp(arg.replace(/\*/g, '.*'), 'i');
+for (const f of [defaultTxtPath, userTxtPath]) {
+  if (!fs.existsSync(f)) continue;
+  for (const line of fs.readFileSync(f, 'utf8').split('\n')) {
+    if (re2.test(line)) console.log(line);
+  }
 }

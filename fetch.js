@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { homedir } from 'node:os';
 
 const DEFAULT_TXT_PATH = join(dirname(fileURLToPath(import.meta.url)), 'apis.txt');
+const USER_TXT_PATH = join(homedir(), '.apis', 'apis.txt');
 
 const parse = (c) => {
   const lines = c.trim().split('\n');
@@ -50,8 +52,15 @@ const walk = (obj, v) => {
   return obj;
 };
 
-export function getApis(configPath = DEFAULT_TXT_PATH) {
-  return parse(fs.readFileSync(configPath, 'utf8')).apis;
+export function getApis(configPath) {
+  if (configPath) return parse(fs.readFileSync(configPath, 'utf8')).apis;
+  const defaults = parse(fs.readFileSync(DEFAULT_TXT_PATH, 'utf8')).apis;
+  if (!fs.existsSync(USER_TXT_PATH)) return defaults;
+  const user = parse(fs.readFileSync(USER_TXT_PATH, 'utf8')).apis;
+  const key = a => `${a.service}.${a.name}`;
+  const map = new Map(defaults.map(a => [key(a), a]));
+  for (const a of user) map.set(key(a), a);
+  return [...map.values()];
 }
 
 export function getApi(service, name, configPath) {

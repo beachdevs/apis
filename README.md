@@ -4,21 +4,15 @@ A quick and flexible API tool for calling services from the command line or as a
 
 ## Installation
 
-### Quick Install
-
 ```bash
-git clone https://github.com/beachdev/apis.git
-cd apis
-./install.sh
+git clone https://github.com/beachdev/apis.git && cd apis && ./install.sh
 ```
 
-The installer will:
-1. Create `~/.apis/` and copy `apis.txt` there.
-2. Ask to add the `api` command to your shell profile as an alias.
+This creates `~/.apis/` for your custom APIs and adds the `api` alias to your shell. Run `git pull` to get updates.
 
 ## CLI Usage
 
-The CLI looks for `~/.apis/apis.txt` first, then falls back to the one in the installation directory.
+Built-in APIs are loaded from the repo's `apis.txt`. Your custom APIs in `~/.apis/apis.txt` are merged on top — entries with the same `service.name` override the defaults.
 
 ```bash
 # List all available APIs

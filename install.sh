@@ -14,11 +14,11 @@ echo "🚀 Installing apis..."
 # 1. Setup config directory
 echo "Creating $CONF_DIR..."
 mkdir -p "$CONF_DIR"
-if [ -f "$DIR/apis.txt" ]; then
-    cp "$DIR/apis.txt" "$CONF_DIR/apis.txt"
-    echo "✅ Copied apis.txt to $CONF_DIR/apis.txt"
+if [ ! -f "$CONF_DIR/apis.txt" ]; then
+    echo "service name url method headers body" > "$CONF_DIR/apis.txt"
+    echo "✅ Created empty $CONF_DIR/apis.txt for your custom APIs"
 else
-    echo "⚠️  apis.txt not found in $DIR, skipping copy."
+    echo "ℹ️  $CONF_DIR/apis.txt already exists, keeping it"
 fi
 
 # 2. Make api.js executable
@@ -60,6 +60,6 @@ fi
 
 echo ""
 echo "🎉 Installation complete!"
-echo "Note: By default, the CLI will look for apis.txt in its own directory."
-echo "To use your personal config, you can use the 'configPath' override in the module"
-echo "or update the CLI to check $CONF_DIR/apis.txt."
+echo "Built-in APIs are loaded from the repo's apis.txt."
+echo "Add your own APIs to $CONF_DIR/apis.txt — they merge automatically."
+echo "Run 'git pull' to get updated built-in APIs."
