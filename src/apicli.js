@@ -18,7 +18,6 @@ const usage = `
 
 ${c.bold}Commands${c.reset}
   ${c.cyan}list${c.reset} [pattern]          List APIs (e.g. ${c.dim}apicli list "openrouter*"${c.reset})
-  ${c.cyan}where${c.reset}                   Show path to apicli.toml/apis.txt
   ${c.cyan}help${c.reset} <pattern>          Show matching lines (e.g. ${c.dim}apicli help "h*"${c.reset})
   ${c.green}<service.name>${c.reset} [k=v …]  Call API with optional params
 
@@ -26,6 +25,8 @@ ${c.bold}Options${c.reset}
   ${c.cyan}-time${c.reset}                   Print request duration
   ${c.cyan}-debug${c.reset}                  Print fetch request/response info (e.g. ${c.dim}apicli -debug httpbin.get${c.reset})
   ${c.cyan}-config${c.reset} <path>         Use custom config file (e.g. ${c.dim}apicli -config ./custom.toml httpbin.get${c.reset})
+
+${c.bold}Config${c.reset}: The active config file path(s) print to stderr before every run (the merging of default + user settings or the custom file specified with -config).
 
 ${c.bold}Note${c.reset}: Use quotes for patterns with wildcards (e.g. "h*") to prevent shell expansion.
   Private APIs in ${c.dim}~/.apicli/apicli.toml${c.reset} are merged with built-ins — add your own there.
