@@ -196,6 +196,9 @@ test('CLI - no args shows usage', () => {
   const r = run([]);
   assert.strictEqual(r.status, 0);
   assert.match(r.stdout, /Commands/);
+  const expectedDefault = join(projectRoot, 'apicli.toml');
+  assert.match(r.stderr, new RegExp(`apicli\\.toml:.*${escapeRegex(expectedDefault)}`));
+  assert.match(r.stderr, new RegExp(`default:.*${escapeRegex(expectedDefault)}`));
 });
 
 test('CLI - -h and --help show usage', () => {
@@ -209,9 +212,6 @@ test('CLI - list', () => {
   assert.strictEqual(r.status, 0);
   assert.match(r.stdout, /httpbin\.get/);
   assert.match(r.stdout, /catfact\.getFact/);
-  const expectedDefault = join(projectRoot, 'apicli.toml');
-  assert.match(r.stderr, new RegExp(`default:.*${escapeRegex(expectedDefault)}`));
-  assert.match(r.stderr, new RegExp(`apicli\\.toml:.*${escapeRegex(expectedDefault)}`));
 });
 
 test('CLI - list with pattern', () => {
@@ -228,8 +228,6 @@ test('CLI - -config uses custom config', () => {
     const r = run(['-config', tmpPath, 'list']);
     assert.strictEqual(r.status, 0);
     assert.match(r.stdout, /custom\.get/);
-    assert.match(r.stderr, new RegExp(`config:.*${escapeRegex(tmpPath)}`));
-    assert.match(r.stderr, new RegExp(`apicli\\.toml:.*${escapeRegex(join(projectRoot, 'apicli.toml'))}`));
   } finally {
     fs.unlinkSync(tmpPath);
   }

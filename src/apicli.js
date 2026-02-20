@@ -72,7 +72,8 @@ const getConfigFiles = (override) => {
   return files;
 };
 
-printConfigInfo();
+const showConfigInfo = args.length === 0;
+if (showConfigInfo) printConfigInfo();
 
 if (!arg || arg === '-h' || arg === '--help') {
   console.log(usage);
