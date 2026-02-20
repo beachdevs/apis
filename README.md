@@ -86,7 +86,7 @@ const data = await fetchApi('httpbin', 'get', { simple: true, debug: true });
 
 ## Configuration
 
-### apicli.toml (recommended)
+### apicli.toml
 
 Each API is a section keyed by `service.name`. Use `$VAR` (optional) or `!$VAR` (required) for variable substitution. Use `BEARER !$TOKEN` in `headers` as shorthand for `Authorization: Bearer` + `Content-Type: application/json`.
 
@@ -101,16 +101,6 @@ url = "https://api.openai.com/v1/chat/completions"
 method = "POST"
 headers = { Authorization = "Bearer !$API_KEY", "Content-Type" = "application/json" }
 body = """{"model": "!$MODEL", "messages": [{"role": "user", "content": "!$PROMPT"}]}"""
-```
-
-### apis.txt (legacy)
-
-Space-separated values with a header. Same variable rules: `$VAR` and `!$VAR`.
-
-```text
-service name url method headers body
-httpbin get https://httpbin.org/get GET {}
-openai chat https://api.openai.com/v1/chat/completions POST "{"Authorization": "Bearer !$API_KEY"}" "{"model": "!$MODEL", "messages": [{"role": "user", "content": "!$PROMPT"}]}"
 ```
 
 OpenRouter supports optional `$PROVIDER` to prefer a specific provider (e.g. `order: ["openai"]`).
