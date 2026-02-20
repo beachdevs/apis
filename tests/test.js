@@ -207,15 +207,15 @@ test('CLI - -h and --help show usage', () => {
   assert.match(run(['-h']).stdout, /Commands/);
 });
 
-test('CLI - list', () => {
-  const r = run(['list']);
+test('CLI - ls', () => {
+  const r = run(['ls']);
   assert.strictEqual(r.status, 0);
   assert.match(r.stdout, /httpbin\.get/);
   assert.match(r.stdout, /catfact\.getFact/);
 });
 
-test('CLI - list with pattern', () => {
-  const r = run(['list', 'httpbin']);
+test('CLI - ls with pattern', () => {
+  const r = run(['ls', 'httpbin']);
   assert.strictEqual(r.status, 0);
   assert.match(r.stdout, /httpbin\.get/);
   assert.doesNotMatch(r.stdout, /catfact/);
@@ -225,7 +225,7 @@ test('CLI - -config uses custom config', () => {
   const tmpPath = join(testsDir, 'tmp-config.toml');
   fs.writeFileSync(tmpPath, '[apis."custom.get"]\nurl = "https://httpbin.org/get"\nmethod = "GET"\nheaders = {}');
   try {
-    const r = run(['-config', tmpPath, 'list']);
+    const r = run(['-config', tmpPath, 'ls']);
     assert.strictEqual(r.status, 0);
     assert.match(r.stdout, /custom\.get/);
   } finally {

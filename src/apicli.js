@@ -18,8 +18,8 @@ const usage = `
 ${c.dim}apicli.toml:${c.reset} ${defaultTomlPath}
 
 ${c.bold}Commands${c.reset}
-  ${c.cyan}list${c.reset} [pattern]          List APIs (e.g. ${c.dim}apicli list "openrouter*"${c.reset})
-  ${c.cyan}help${c.reset} <pattern>          Show matching lines (e.g. ${c.dim}apicli help "h*"${c.reset})
+  ${c.cyan}ls${c.reset} [pattern]            List APIs (e.g. ${c.dim}apicli ls "openrouter*"${c.reset})
+  ${c.cyan}help${c.reset} <pattern>          Show matching lines (e.g. ${c.dim}apicli help "httpbin*"${c.reset})
   ${c.green}<service.name>${c.reset} [k=v …]  Call API with optional params
 
 ${c.bold}Options${c.reset}
@@ -78,7 +78,7 @@ if (!arg || arg === '-h' || arg === '--help') {
   process.exit(0);
 }
 
-if (arg === 'list') {
+if (arg === 'ls') {
   const re = new RegExp(pattern.replace(/\*/g, '.*'), 'i');
   for (const a of getApis(configPath)) {
     const id = `${a.service}.${a.name}`;

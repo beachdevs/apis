@@ -20,13 +20,13 @@ Running `apicli` with no arguments logs the active config file path(s) to stderr
 
 ```bash
 # List all available APIs
-apicli list
+apicli ls
 
 # Filter APIs
-apicli list httpbin
+apicli ls httpbin
 
 # Use a custom config file
-apicli -config ./custom.toml list
+apicli -config ./custom.toml ls
 apicli -config ~/my-apis.toml httpbin.get
 
 # Show matching lines from config
