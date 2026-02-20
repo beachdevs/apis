@@ -1,3 +1,11 @@
 #!/bin/sh
-cd "$(dirname "$0")"
-exec node ../src/apicli.js "$@"
+set -e
+PRG="$0"
+REALPATH=$(command -v realpath || command -v grealpath)
+if [ -n "$REALPATH" ]; then
+  PRG="$($REALPATH "$PRG")"
+else
+  PRG="$(perl -MCwd=abs_path -e 'print abs_path shift' "$PRG")"
+fi
+DIR="$(cd "$(dirname "$PRG")" && pwd -P)"
+exec node "$DIR/../src/apicli.js" "$@"
