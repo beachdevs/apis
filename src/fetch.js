@@ -156,6 +156,7 @@ export async function fetchApi(service, name, overrides = {}) {
   }
   const res = await fetch(url, { method, headers, body: body || undefined });
   if (debug) {
+    console.error('');
     console.error('\x1b[90m< %s %s\x1b[0m', res.status, res.statusText);
     for (const [k, v] of res.headers.entries()) console.error('\x1b[90m< %s: %s\x1b[0m', k, v);
   }
