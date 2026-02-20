@@ -8,55 +8,59 @@ A quick and flexible API tool for calling services from the command line or as a
 git clone https://github.com/beachdevs/apicli.git && cd apicli && ./install.sh
 ```
 
-This creates `~/.apicli/` for your custom APIs and adds the `api` alias to your shell. Run `git pull` to get updates.
+This creates `~/.apicli/` for your custom APIs and adds the `apicli` alias to your shell. Run `git pull` to get updates.
 
 ## CLI Usage
 
-Built-in APIs are loaded from the repo's `apis.txt`. Private APIs in `~/.apicli/apis.txt` are merged on top — entries with the same `service.name` override the defaults. Add your own APIs there.
+Built-in APIs are loaded from the repo's `apicli.toml` (or `apis.txt`). Private APIs in `~/.apicli/apicli.toml` (or `apis.txt`) are merged on top — entries with the same `service.name` override the defaults. Add your own APIs there.
 
-**Options:** `-time` — print request duration; `-debug` — print fetch request/response info (URL, headers, status) to stderr.
+**Options:** `-time` — print request duration; `-debug` — print fetch request/response info to stderr; `-config <path>` — use a custom config file (`.toml` or `.txt`).
 
 ```bash
 # List all available APIs
-api list
+apicli list
 
 # Filter APIs
-api list httpbin
+apicli list httpbin
 
-# Show the location of the apis.txt file being used
-api where
+# Show the location of the config file(s) being used
+apicli where
 
-# Show matching lines from apis.txt
-api help httpbin
+# Use a custom config file
+apicli -config ./custom.toml list
+apicli -config ~/my-apis.toml httpbin.get
+
+# Show matching lines from config
+apicli help httpbin
 
 # Call an API
-api httpbin.get
+apicli httpbin.get
 
 # Call an API with parameters
-api httpbin.get foo=bar
+apicli httpbin.get foo=bar
 
 # Call an API requiring keys
-api openai.chat API_KEY=$OPENAI_API_KEY MODEL=gpt-4o-mini PROMPT="Hello!"
+apicli openai.chat API_KEY=$OPENAI_API_KEY MODEL=gpt-4o-mini PROMPT="Hello!"
 
 # OpenRouter with optional provider
-api openrouter.chat API_KEY=$OPENROUTER_API_KEY MODEL=openai/gpt-4o-mini PROVIDER=openai PROMPT="Hello!"
+apicli openrouter.chat API_KEY=$OPENROUTER_API_KEY MODEL=openai/gpt-4o-mini PROVIDER=openai PROMPT="Hello!"
 
 # Cerebras (API_KEY or CEREBRAS_API_KEY)
-api cerebras.chat API_KEY=$CEREBRAS_API_KEY MODEL=llama3.1-8b PROMPT="Hello!"
+apicli cerebras.chat API_KEY=$CEREBRAS_API_KEY MODEL=llama3.1-8b PROMPT="Hello!"
 
 # Time the request
-api -time httpbin.get
+apicli -time httpbin.get
 
 # Debug: show request/response info
-api -debug httpbin.get
+apicli -debug httpbin.get
 ```
 
 ## Library Usage
 
-You can import the module to use the same logic in your own applications.
+Import the module to use the same logic in your own applications.
 
 ```javascript
-import { fetchApi, getRequest } from 'apicli';
+import { fetchApi, getRequest, getApis } from 'apicli';
 
 // Simple usage
 const data = await fetchApi('httpbin', 'get', { simple: true });
@@ -70,9 +74,9 @@ const res = await fetchApi('openai', 'chat', {
   }
 });
 
-// Using a custom local apis.txt file
+// Custom config file (apicli.toml or apis.txt)
 const customData = await fetchApi('my-service', 'my-name', {
-  configPath: './local-apis.txt',
+  configPath: './custom.toml',
   simple: true
 });
 
@@ -80,9 +84,28 @@ const customData = await fetchApi('my-service', 'my-name', {
 const data = await fetchApi('httpbin', 'get', { simple: true, debug: true });
 ```
 
-## Configuration (`apis.txt`)
+## Configuration
 
-The `apis.txt` file is a space-separated values file with a header. It supports variable substitution using `$VAR` (optional) or `!$VAR` (required).
+### apicli.toml (recommended)
+
+Each API is a section keyed by `service.name`. Use `$VAR` (optional) or `!$VAR` (required) for variable substitution. Use `BEARER !$TOKEN` in `headers` as shorthand for `Authorization: Bearer` + `Content-Type: application/json`.
+
+```toml
+[apis."httpbin.get"]
+url = "https://httpbin.org/get"
+method = "GET"
+headers = {}
+
+[apis."openai.chat"]
+url = "https://api.openai.com/v1/chat/completions"
+method = "POST"
+headers = { Authorization = "Bearer !$API_KEY", "Content-Type" = "application/json" }
+body = """{"model": "!$MODEL", "messages": [{"role": "user", "content": "!$PROMPT"}]}"""
+```
+
+### apis.txt (legacy)
+
+Space-separated values with a header. Same variable rules: `$VAR` and `!$VAR`.
 
 ```text
 service name url method headers body

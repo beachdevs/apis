@@ -1,0 +1,45 @@
+[apis."catfact.getFact"]
+url = "https://catfact.ninja/fact"
+method = "GET"
+headers = {}
+
+[apis."httpbin.get"]
+url = "https://httpbin.org/get"
+method = "GET"
+headers = {}
+jq = "url"
+
+[apis."httpbin.post"]
+url = "https://httpbin.org/post"
+method = "POST"
+headers = { Content-Type = "application/json" }
+
+[apis."openai.chat"]
+url = "https://api.openai.com/v1/chat/completions"
+method = "POST"
+headers = { Authorization = "Bearer !$API_KEY", "Content-Type" = "application/json" }
+body = """{"model": "!$MODEL", "messages": [{"role": "user", "content": "!$PROMPT"}]}"""
+
+[apis."openrouter.chat"]
+url = "https://openrouter.ai/api/v1/chat/completions"
+method = "POST"
+headers = { Authorization = "Bearer !$API_KEY", "Content-Type" = "application/json" }
+body = """{"model": "!$MODEL", "messages": [{"role": "system", "content": "$SYSTEM_PROMPT"}, {"role": "user", "content": "!$PROMPT"}] , "provider": {"order": ["$PROVIDER"]}}"""
+
+[apis."cerebras.chat"]
+url = "https://api.cerebras.ai/v1/chat/completions"
+method = "POST"
+headers = { Authorization = "Bearer !$CEREBRAS_API_KEY", "Content-Type" = "application/json" }
+body = """{"model": "!$MODEL", "messages": [{"role": "system", "content": "$SYSTEM_PROMPT"}, {"role": "user", "content": "!$PROMPT"}], "stream": false}"""
+
+[apis."cerebras.chat2"]
+url = "https://api.cerebras.ai/v1/chat/completions"
+method = "POST"
+headers = "BEARER !$CEREBRAS_API_KEY"
+body = """{"model": "!$MODEL", "messages": [{"role": "system", "content": "$SYSTEM_PROMPT"}, {"role": "user", "content": "!$PROMPT"}], "stream": false}"""
+
+[apis."cloudflare.visits"]
+url = "https://api.cloudflare.com/client/v4/graphql"
+method = "POST"
+headers = { Authorization = "Bearer $CLOUDFLARE_ANALYTICS_TOKEN", "Content-Type" = "application/json" }
+body = """{"query": "query ($accountTag: string, $start: DateTime, $end: DateTime) { viewer { accounts(filter: { accountTag: $accountTag }) { httpRequestsAdaptiveGroups(limit: 100, filter: { datetime_geq: $start, datetime_lt: $end }) { dimensions { datetime } sum { visits } } } } }", "variables": {"accountTag": "$CLOUDFLARE_ACCOUNT_ID", "start": "$START", "end": "$END"}}"""

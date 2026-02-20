@@ -1,12 +1,16 @@
 {
   "name": "apicli",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Quick and flexible API tool for CLI and Node.js",
   "repository": { "type": "git", "url": "https://github.com/beachdevs/apicli.git" },
-  "main": "fetch.js",
-  "bin": { "api": "./api.js" },
+  "main": "./src/fetch.js",
+  "exports": "./src/fetch.js",
+  "bin": { "apicli": "./bin/apicli" },
   "type": "module",
-  "scripts": { "test": "node test.js" },
+  "scripts": { "test": "node tests/test.js" },
+  "dependencies": {
+    "@iarna/toml": "^3.0.0"
+  },
   "author": "",
   "license": "ISC"
 }

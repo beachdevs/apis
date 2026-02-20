@@ -4,16 +4,33 @@ import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import * as api from './fetch.js';
+import * as api from '../src/fetch.js';
 
-const root = dirname(fileURLToPath(import.meta.url));
-const cli = join(root, 'api.js');
-const configPath = join(root, 'apis.txt');
+const testsDir = dirname(fileURLToPath(import.meta.url));
+const projectRoot = join(testsDir, '..');
+const cli = join(projectRoot, 'src', 'apicli.js');
+const configPath = join(projectRoot, 'apicli.toml');
+const mockFetchPath = join(testsDir, 'mock-fetch.js');
 
-const run = (args, env = {}) => spawnSync(process.execPath, [cli, ...args], {
-  encoding: 'utf8',
-  cwd: root,
-  env: { ...process.env, ...env }
+const run = (args, env = {}) => {
+  const nodeOptions = [process.env.NODE_OPTIONS, env.NODE_OPTIONS, `--import=${mockFetchPath}`]
+    .filter(Boolean)
+    .join(' ');
+  return spawnSync(process.execPath, [cli, ...args], {
+    encoding: 'utf8',
+    cwd: projectRoot,
+    env: { ...process.env, ...env, NODE_OPTIONS: nodeOptions }
+  });
+};
+
+let originalFetch;
+test.before(async () => {
+  originalFetch = globalThis.fetch;
+  await import('./mock-fetch.js');
+});
+
+test.after(() => {
+  globalThis.fetch = originalFetch;
 });
 
 test('fetch.js - getApis', () => {
@@ -106,20 +123,30 @@ test('fetch.js - openrouter without PROVIDER omits provider block', () => {
   assert.strictEqual(body.provider, undefined);
 });
 
-test('fetch.js - fetchApi (real network call to httpbin)', async () => {
+test('fetch.js - fetchApi (mock network call)', async () => {
   const res = await api.fetchApi('httpbin', 'get', { simple: true, configPath });
-  assert.ok(res.url.includes('httpbin.org'));
+  assert.strictEqual(res.url, 'https://httpbin.org/get');
 });
 
-test('fetch.js - custom configPath', () => {
-  const tmpPath = join(root, 'tmp-apis.txt');
+test('fetch.js - custom configPath (txt)', () => {
+  const tmpPath = join(testsDir, 'tmp-apis.txt');
   fs.writeFileSync(tmpPath, 'service name url method headers body\nlocal test http://localhost/$VAR GET {}');
   try {
-    // Test getApi
     const item = api.getApi('local', 'test', tmpPath);
     assert.strictEqual(item.url, 'http://localhost/$VAR');
+    const req = api.getRequest('local', 'test', { VAR: 'foo' }, tmpPath);
+    assert.strictEqual(req.url, 'http://localhost/foo');
+  } finally {
+    fs.unlinkSync(tmpPath);
+  }
+});
 
-    // Test getRequest
+test('fetch.js - custom configPath (toml)', () => {
+  const tmpPath = join(testsDir, 'tmp-apis.toml');
+  fs.writeFileSync(tmpPath, '[apis."local.test"]\nurl = "http://localhost/$VAR"\nmethod = "GET"\nheaders = {}');
+  try {
+    const item = api.getApi('local', 'test', tmpPath);
+    assert.strictEqual(item.url, 'http://localhost/$VAR');
     const req = api.getRequest('local', 'test', { VAR: 'foo' }, tmpPath);
     assert.strictEqual(req.url, 'http://localhost/foo');
   } finally {
@@ -128,16 +155,38 @@ test('fetch.js - custom configPath', () => {
 });
 
 test('fetch.js - fetchApi with overrides and configPath', async () => {
-  const tmpPath = join(root, 'tmp-fetch-apis.txt');
+  const tmpPath = join(testsDir, 'tmp-fetch-apis.txt');
   fs.writeFileSync(tmpPath, 'service name url method headers body\nbin get https://httpbin.org/get GET {}');
   try {
-    const res = await api.fetchApi('bin', 'get', { 
-      configPath: tmpPath,
-      simple: true 
-    });
+    const res = await api.fetchApi('bin', 'get', { configPath: tmpPath, simple: true });
     assert.strictEqual(res.url, 'https://httpbin.org/get');
   } finally {
     fs.unlinkSync(tmpPath);
+  }
+});
+
+test('fetch.js - bearer shorthand with required variable', () => {
+  const req = api.getRequest('cerebras', 'chat2', {
+    CEREBRAS_API_KEY: 'secret',
+    MODEL: 'llama',
+    PROMPT: 'hello'
+  }, configPath);
+  assert.strictEqual(req.headers.Authorization, 'Bearer secret');
+  assert.strictEqual(req.headers['Content-Type'], 'application/json');
+});
+
+test('fetch.js - bearer shorthand missing required variable', () => {
+  const oldCerebrasKey = process.env.CEREBRAS_API_KEY;
+  const oldApiKey = process.env.API_KEY;
+  delete process.env.CEREBRAS_API_KEY;
+  delete process.env.API_KEY;
+  try {
+    assert.throws(() => {
+      api.getRequest('cerebras', 'chat2', { MODEL: 'llama', PROMPT: 'hello' }, configPath);
+    }, /Variable .* is required/);
+  } finally {
+    if (oldCerebrasKey !== undefined) process.env.CEREBRAS_API_KEY = oldCerebrasKey;
+    if (oldApiKey !== undefined) process.env.API_KEY = oldApiKey;
   }
 });
 
@@ -170,7 +219,28 @@ test('CLI - list with pattern', () => {
 test('CLI - where', () => {
   const r = run(['where']);
   assert.strictEqual(r.status, 0);
-  assert.match(r.stdout, /apis\.txt/);
+  assert.match(r.stdout, /(apicli\.toml|apis\.txt)/);
+});
+
+test('CLI - -config uses custom config', () => {
+  const tmpPath = join(testsDir, 'tmp-config.toml');
+  fs.writeFileSync(tmpPath, '[apis."custom.get"]\nurl = "https://httpbin.org/get"\nmethod = "GET"\nheaders = {}');
+  try {
+    const r = run(['-config', tmpPath, 'list']);
+    assert.strictEqual(r.status, 0);
+    assert.match(r.stdout, /custom\.get/);
+    const r2 = run(['-config', tmpPath, 'where']);
+    assert.strictEqual(r2.status, 0);
+    assert.match(r2.stdout, /config:/);
+  } finally {
+    fs.unlinkSync(tmpPath);
+  }
+});
+
+test('CLI - -config missing path errors', () => {
+  const r = run(['-config']);
+  assert.strictEqual(r.status, 1);
+  assert.match(r.stderr, /-config requires/);
 });
 
 test('CLI - help pattern', () => {
@@ -179,7 +249,7 @@ test('CLI - help pattern', () => {
   assert.match(r.stdout, /https:\/\/httpbin\.org\/get/);
 });
 
-test('CLI - service call (real network)', () => {
+test('CLI - service call (mock network)', () => {
   const r = run(['httpbin.get']);
   assert.strictEqual(r.status, 0);
   const json = JSON.parse(r.stdout);
@@ -207,7 +277,7 @@ test('CLI - -debug prints fetch info', () => {
   JSON.parse(r.stdout);
 });
 
-test('CLI - --debug and api -debug in different position', () => {
+test('CLI - --debug in different position', () => {
   const r = run(['httpbin.get', '--debug']);
   assert.strictEqual(r.status, 0);
   assert.match(r.stderr, /> GET/);
