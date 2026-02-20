@@ -211,6 +211,7 @@ test('CLI - list', () => {
   assert.match(r.stdout, /catfact\.getFact/);
   const expectedDefault = join(projectRoot, 'apicli.toml');
   assert.match(r.stderr, new RegExp(`default:.*${escapeRegex(expectedDefault)}`));
+  assert.match(r.stderr, new RegExp(`apicli\\.toml:.*${escapeRegex(expectedDefault)}`));
 });
 
 test('CLI - list with pattern', () => {
@@ -228,6 +229,7 @@ test('CLI - -config uses custom config', () => {
     assert.strictEqual(r.status, 0);
     assert.match(r.stdout, /custom\.get/);
     assert.match(r.stderr, new RegExp(`config:.*${escapeRegex(tmpPath)}`));
+    assert.match(r.stderr, new RegExp(`apicli\\.toml:.*${escapeRegex(join(projectRoot, 'apicli.toml'))}`));
   } finally {
     fs.unlinkSync(tmpPath);
   }

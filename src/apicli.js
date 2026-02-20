@@ -27,9 +27,7 @@ ${c.bold}Options${c.reset}
   ${c.cyan}-config${c.reset} <path>         Use custom config file (e.g. ${c.dim}apicli -config ./custom.toml httpbin.get${c.reset})
 
 ${c.bold}Config${c.reset}: The active config file path(s) print to stderr before every run (the merging of default + user settings or the custom file specified with -config).
-
-${c.bold}Note${c.reset}: Use quotes for patterns with wildcards (e.g. "h*") to prevent shell expansion.
-  Private APIs in ${c.dim}~/.apicli/apicli.toml${c.reset} are merged with built-ins — add your own there.
+  Built-in definitions live in ${c.dim}${defaultTomlPath}${c.reset}; user overrides live in ${c.dim}~/.apicli/apicli.toml${c.reset}.
 
 ${c.bold}Example${c.reset}
   ${c.dim}apicli openrouter.chat API_KEY=$OPENROUTER_API_KEY MODEL=openai/gpt-4o-mini PROMPT=Hello${c.reset}
@@ -57,6 +55,7 @@ const pattern = args[1] ?? '.';
 const defaultConfigPath = () => fs.existsSync(defaultTomlPath) ? defaultTomlPath : defaultTxtPath;
 const userConfigPath = () => fs.existsSync(userTomlPath) ? userTomlPath : (fs.existsSync(userTxtPath) ? userTxtPath : null);
 const printConfigInfo = () => {
+  console.error('apicli.toml:', defaultTomlPath);
   if (configPath) {
     console.error('config:', configPath);
     return;
