@@ -6,8 +6,6 @@ import { fetchApi, getApi, getApis } from './fetch.js';
 import { homedir } from 'node:os';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const defaultTomlPath = join(root, 'apicli.toml');
-const defaultTxtPath = join(root, 'apis.txt');
 const userTomlPath = join(homedir(), '.apicli', 'apicli.toml');
 const userTxtPath = join(homedir(), '.apicli', 'apis.txt');
 
@@ -15,7 +13,6 @@ const c = { dim: '\x1b[90m', cyan: '\x1b[36m', yellow: '\x1b[33m', green: '\x1b[
 
 const usage = `
 🔌 ${c.bold}apicli${c.reset} ${c.dim}— call APIs (${c.cyan}./apicli${c.reset})${c.reset}
-${c.dim}apicli.toml:${c.reset} ${defaultTomlPath}
 
 ${c.bold}Commands${c.reset}
   ${c.cyan}ls${c.reset} [pattern]            List APIs (e.g. ${c.dim}apicli ls "openrouter*"${c.reset})
@@ -50,24 +47,19 @@ const args = rawArgs.filter((a, i) => {
 const arg = args[0];
 const pattern = args[1] ?? '.';
 
-const defaultConfigPath = () => fs.existsSync(defaultTomlPath) ? defaultTomlPath : defaultTxtPath;
 const userConfigPath = () => fs.existsSync(userTomlPath) ? userTomlPath : (fs.existsSync(userTxtPath) ? userTxtPath : null);
 const printConfigInfo = () => {
-  console.error('apicli.toml:', defaultTomlPath);
   if (configPath) {
     console.error('config:', configPath);
     return;
   }
-  console.error('default:', defaultConfigPath());
   const userPath = userConfigPath();
   if (userPath) console.error('user:   ', userPath);
 };
 const getConfigFiles = (override) => {
   if (override) return [override];
-  const files = [defaultConfigPath()];
   const userPath = userConfigPath();
-  if (userPath) files.push(userPath);
-  return files;
+  return userPath ? [userPath] : [];
 };
 
 const showConfigInfo = args.length === 0;

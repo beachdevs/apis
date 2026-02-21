@@ -9,7 +9,7 @@ import * as api from '../src/fetch.js';
 const testsDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(testsDir, '..');
 const cli = join(projectRoot, 'src', 'apicli');
-const configPath = join(projectRoot, 'apicli.toml');
+const configPath = join(testsDir, 'test-apis.toml');
 const mockFetchPath = join(testsDir, 'mock-fetch.js');
 
 const run = (args, env = {}) => {
@@ -28,10 +28,56 @@ let originalFetch;
 test.before(async () => {
   originalFetch = globalThis.fetch;
   await import('./mock-fetch.js');
+  fs.writeFileSync(configPath, `
+[apis."httpbin.get"]
+url = "https://httpbin.org/get"
+method = "GET"
+headers = {}
+
+[apis."catfact.getFact"]
+url = "https://catfact.ninja/fact"
+method = "GET"
+headers = {}
+
+[apis."openai.chat"]
+url = "https://api.openai.com/v1/chat/completions"
+method = "POST"
+headers = { Authorization = "Bearer $!API_KEY" }
+body = """
+{
+  "model": "$!MODEL",
+  "messages": [{"role": "user", "content": "$!PROMPT"}]
+}
+"""
+
+[apis."openrouter.chat"]
+url = "https://openrouter.ai/api/v1/chat/completions"
+method = "POST"
+headers = { Authorization = "Bearer $!API_KEY" }
+body = """
+{
+  "model": "$!MODEL",
+  "messages": [{"role": "user", "content": "$OPTIONAL_PROMPT"}, {"role": "user", "content": "$!PROMPT"}]
+  , "provider": {"order": ["$PROVIDER"]}
+}
+"""
+
+[apis."cerebras.chat2"]
+url = "https://api.cerebras.ai/v1/chat/completions"
+method = "POST"
+headers = "BEARER $!CEREBRAS_API_KEY"
+body = """
+{
+  "model": "$!MODEL",
+  "messages": [{"role": "user", "content": "$!PROMPT"}]
+}
+"""
+  `);
 });
 
 test.after(() => {
   globalThis.fetch = originalFetch;
+  if (fs.existsSync(configPath)) fs.unlinkSync(configPath);
 });
 
 test('fetch.js - getApis', () => {
@@ -197,9 +243,6 @@ test('CLI - no args shows usage', () => {
   const r = run([]);
   assert.strictEqual(r.status, 0);
   assert.match(r.stdout, /Commands/);
-  const expectedDefault = join(projectRoot, 'apicli.toml');
-  assert.match(r.stderr, new RegExp(`apicli\\.toml:.*${escapeRegex(expectedDefault)}`));
-  assert.match(r.stderr, new RegExp(`default:.*${escapeRegex(expectedDefault)}`));
 });
 
 test('CLI - -h and --help show usage', () => {
@@ -209,14 +252,14 @@ test('CLI - -h and --help show usage', () => {
 });
 
 test('CLI - ls', () => {
-  const r = run(['ls']);
+  const r = run(['-config', configPath, 'ls']);
   assert.strictEqual(r.status, 0);
   assert.match(r.stdout, /httpbin\.get/);
   assert.match(r.stdout, /catfact\.getFact/);
 });
 
 test('CLI - ls with pattern', () => {
-  const r = run(['ls', 'httpbin']);
+  const r = run(['-config', configPath, 'ls', 'httpbin']);
   assert.strictEqual(r.status, 0);
   assert.match(r.stdout, /httpbin\.get/);
   assert.doesNotMatch(r.stdout, /catfact/);
@@ -241,33 +284,33 @@ test('CLI - -config missing path errors', () => {
 });
 
 test('CLI - help pattern', () => {
-  const r = run(['help', 'httpbin']);
+  const r = run(['-config', configPath, 'help', 'httpbin']);
   assert.strictEqual(r.status, 0);
   assert.match(r.stdout, /https:\/\/httpbin\.org\/get/);
 });
 
 test('CLI - service call (mock network)', () => {
-  const r = run(['httpbin.get']);
+  const r = run(['-config', configPath, 'httpbin.get']);
   assert.strictEqual(r.status, 0);
   const json = JSON.parse(r.stdout);
   assert.strictEqual(json.url, 'https://httpbin.org/get');
 });
 
 test('CLI - service call with params', () => {
-  const r = run(['httpbin.get', 'foo=bar']);
+  const r = run(['-config', configPath, 'httpbin.get', 'foo=bar']);
   assert.strictEqual(r.status, 0);
   JSON.parse(r.stdout);
 });
 
 test('CLI - -time can appear anywhere in args', () => {
-  const r = run(['httpbin.get', '-time']);
+  const r = run(['-config', configPath, 'httpbin.get', '-time']);
   assert.strictEqual(r.status, 0);
   assert.match(r.stderr, /\d+ms/);
   JSON.parse(r.stdout);
 });
 
 test('CLI - -debug prints fetch info', () => {
-  const r = run(['-debug', 'httpbin.get']);
+  const r = run(['-config', configPath, '-debug', 'httpbin.get']);
   assert.strictEqual(r.status, 0);
   assert.match(r.stderr, /> GET https:\/\/httpbin\.org\/get/);
   assert.match(r.stderr, /< 200/);
@@ -276,20 +319,20 @@ test('CLI - -debug prints fetch info', () => {
 });
 
 test('CLI - --debug in different position', () => {
-  const r = run(['httpbin.get', '--debug']);
+  const r = run(['-config', configPath, 'httpbin.get', '--debug']);
   assert.strictEqual(r.status, 0);
   assert.match(r.stderr, /> GET/);
   assert.match(r.stderr, /< 200/);
 });
 
 test('CLI - unknown API', () => {
-  const r = run(['unknown.api']);
+  const r = run(['-config', configPath, 'unknown.api']);
   assert.strictEqual(r.status, 1);
   assert.match(r.stderr, /Unknown API/);
 });
 
 test('CLI - -time prints duration', () => {
-  const r = run(['-time', 'httpbin.get']);
+  const r = run(['-config', configPath, '-time', 'httpbin.get']);
   assert.strictEqual(r.status, 0);
   assert.match(r.stderr, /\d+ms/);
   JSON.parse(r.stdout);

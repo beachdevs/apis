@@ -13,10 +13,6 @@ const runJq = (filter, input) => {
   return r.stdout;
 };
 
-const _dir = dirname(fileURLToPath(import.meta.url));
-const DEFAULT_TOML_PATH = join(_dir, '..', 'apicli.toml');
-const USER_TOML_PATH = join(homedir(), '.apicli', 'apicli.toml');
-
 const parseTxt = (c) => {
   const lines = c.trim().split('\n');
   const h = lines[0].trim().split(/\s+/).filter(Boolean);
@@ -63,8 +59,9 @@ const VAR_ALIASES = {
   CLOUDFLARE_API_TOKEN: ['CLOUDFLARE_ANALYTICS_TOKEN']
 };
 const isEnvVar = (k) => /^[A-Z][A-Z0-9_]*$/.test(k);
-const sub = (s, v = {}) => s?.replace?.(/(!?)\$([A-Za-z_]\w*)/g, (_, r, k) => {
-  if (!isEnvVar(k)) return `$${k}`; // preserve GraphQL/camelCase vars
+const sub = (s, v = {}) => s?.replace?.(/(\$!?)([A-Za-z_]\w*)/g, (_, prefix, k) => {
+  const isRequired = prefix.includes('!');
+  if (!isEnvVar(k)) return `${prefix}${k}`; // preserve GraphQL/camelCase vars
   let val = v[k] ?? process.env[k];
   if (val == null && VAR_ALIASES[k]) {
     for (const alt of VAR_ALIASES[k]) {
@@ -72,7 +69,7 @@ const sub = (s, v = {}) => s?.replace?.(/(!?)\$([A-Za-z_]\w*)/g, (_, r, k) => {
       if (val != null) break;
     }
   }
-  if (r && val == null) throw new Error(`Variable ${k} is required`);
+  if (isRequired && val == null) throw new Error(`Variable ${k} is required`);
   return val ?? '';
 }) ?? s;
 
@@ -88,18 +85,12 @@ export function getApis(configPath) {
     const isToml = configPath.endsWith('.toml');
     return parse(fs.readFileSync(configPath, 'utf8'), isToml).apis;
   }
-  const isDefaultToml = fs.existsSync(DEFAULT_TOML_PATH);
-  const defaults = parse(fs.readFileSync(isDefaultToml ? DEFAULT_TOML_PATH : join(_dir, '..', 'apis.txt'), 'utf8'), isDefaultToml).apis;
   const userTomlPath = join(homedir(), '.apicli', 'apicli.toml');
   const userTxtPath = join(homedir(), '.apicli', 'apis.txt');
   const userPath = fs.existsSync(userTomlPath) ? userTomlPath : (fs.existsSync(userTxtPath) ? userTxtPath : null);
-  if (!userPath) return defaults;
+  if (!userPath) return [];
   const isUserToml = userPath.endsWith('.toml');
-  const user = parse(fs.readFileSync(userPath, 'utf8'), isUserToml).apis;
-  const key = a => `${a.service}.${a.name}`;
-  const map = new Map(defaults.map(a => [key(a), a]));
-  for (const a of user) map.set(key(a), a);
-  return [...map.values()];
+  return parse(fs.readFileSync(userPath, 'utf8'), isUserToml).apis;
 }
 
 export function getApi(service, name, configPath) {
