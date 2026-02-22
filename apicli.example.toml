@@ -15,7 +15,7 @@ headers = { Authorization = "Bearer $!OPENAI_COMPATIBLE_API_KEY" }
 body = """
 {
   "model": "$!MODEL",
-  "messages": [{"role": "user", "content": "$!PROMPT"}]
+  "messages": [{"role": "system", "content": "$SYSTEM_PROMPT"}, {"role": "user", "content": "$!PROMPT"}]
 }
 """
 
