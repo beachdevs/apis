@@ -9,9 +9,9 @@ method = "GET"
 headers = {}
 
 [apis."openai.chat"]
-url = "https://api.openai.com/v1/chat/completions"
+url = "$!OPENAI_COMPATIBLE_BASE_URL"
 method = "POST"
-headers = { Authorization = "Bearer $!API_KEY" }
+headers = { Authorization = "Bearer $!OPENAI_COMPATIBLE_API_KEY" }
 body = """
 {
   "model": "$!MODEL",
@@ -28,16 +28,5 @@ body = """
   "model": "$!MODEL",
   "messages": [{"role": "user", "content": "$OPTIONAL_PROMPT"}, {"role": "user", "content": "$!PROMPT"}]
   , "provider": {"order": ["$PROVIDER"]}
-}
-"""
-
-[apis."cerebras.chat2"]
-url = "https://api.cerebras.ai/v1/chat/completions"
-method = "POST"
-headers = "BEARER $!CEREBRAS_API_KEY"
-body = """
-{
-  "model": "$!MODEL",
-  "messages": [{"role": "user", "content": "$!PROMPT"}]
 }
 """
