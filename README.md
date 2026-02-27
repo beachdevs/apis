@@ -1,71 +1,74 @@
 # apicli
 
-<img src="data:image/svg+xml;utf8,%3Csvg width='48' height='48' viewBox='0 0 48 48' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='48' height='48' rx='12' fill='%2336b5ff'/%3E%3Cpath d='M15 24h18M24 15l9 9-9 9' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" alt="apicli logo" width="48" height="48" />
-
 A quick and flexible API tool for calling services from the command line or as a Bun module.
 
-## Installation
+## Quick Start
 
 ```bash
-npm -g install beachdevs/apicli
+npx beachdevs/apicli catfact.getFact
 ```
-
-This installs the latest release globally. On first run, `apicli` copies the package `apicli.yaml` into `~/.apicli/apicli.yaml` if no user config exists.
 
 ## CLI Usage
 
-A single `apicli.yaml` (either the default copied into `~/.apicli/apicli.yaml` or a custom one passed via `-config <path>`) defines all APIs. Run `apicli` with no arguments to print the effective config path before any other output.
+A single `apicli.yaml` defines all APIs. Use `-config <path>` to point at a custom file.
 
-**Options:** `-time` — print request duration; `-debug` — print fetch request/response info to stderr; `-config <path>` — use a custom `.yaml` file.
+**Options:** `-time` — print request duration; `-debug` — print fetch request/response info to stderr; `-config <path>` — use a custom `.yaml` file; `fetch <name>` — copy one API definition into `./apicli.yaml`.
 
 ```bash
 # List all available APIs
-apicli ls
+npx beachdevs/apicli ls
 
 # Alias for ls
-apicli list openai
+npx beachdevs/apicli list openai
 
 # Filter APIs
-apicli ls httpbin
+npx beachdevs/apicli ls httpbin
 
 # Copy one API definition into ./apicli.yaml
-apicli get httpbin.get
+npx beachdevs/apicli fetch echo.ws
 
 # Use a custom config file
-apicli -config ./custom.yaml ls
-apicli -config ~/my-apis.yaml httpbin.get
+npx beachdevs/apicli -config ./custom.yaml ls
+npx beachdevs/apicli -config ~/my-apis.yaml httpbin.get
 
 # Show matching lines from config
-apicli help httpbin
+npx beachdevs/apicli help httpbin
 
 # Call an API
-apicli httpbin.get
+npx beachdevs/apicli httpbin.get
 
 # Call an API with parameters
-apicli httpbin.get foo=bar
+npx beachdevs/apicli httpbin.get foo=bar
 
 # Call an API requiring keys
-apicli openai.chat API_KEY=$OPENAI_API_KEY MODEL=gpt-4o-mini PROMPT="Hello!"
+npx beachdevs/apicli openai.chat API_KEY=$OPENAI_API_KEY MODEL=gpt-4o-mini PROMPT="Hello!"
 
 # OpenRouter with optional provider
-apicli openrouter.chat API_KEY=$OPENROUTER_API_KEY MODEL=openai/gpt-4o-mini PROVIDER=openai PROMPT="Hello!"
+npx beachdevs/apicli openrouter.chat API_KEY=$OPENROUTER_API_KEY MODEL=openai/gpt-4o-mini PROVIDER=openai PROMPT="Hello!"
 
 # Cerebras (API_KEY or CEREBRAS_API_KEY)
-apicli cerebras.chat API_KEY=$CEREBRAS_API_KEY MODEL=llama3.1-8b PROMPT="Hello!"
+npx beachdevs/apicli cerebras.chat API_KEY=$CEREBRAS_API_KEY MODEL=llama3.1-8b PROMPT="Hello!"
 
 # Time the request
-apicli -time httpbin.get
+npx beachdevs/apicli -time httpbin.get
 
 # Debug: show request/response info
-apicli -debug httpbin.get
+npx beachdevs/apicli -debug httpbin.get
 
 # API example
-apicli catfact.getFact | jq ".fact"
+npx beachdevs/apicli catfact.getFact | jq ".fact"
 ```
 
-## Library Usage
+## Code Example
 
-Import the module to use the same logic in your own applications.
+Install globally with Bun or add as a dependency with npm:
+
+```bash
+bun add -g beachdevs/apicli
+npm install beachdevs/apicli
+```
+
+Then import and call from code:
 
 ```javascript
 import { fetchApi, getRequest, getApis } from 'apicli';
