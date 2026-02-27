@@ -9,7 +9,7 @@ import * as api from '../src/fetch.js';
 const testsDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(testsDir, '..');
 const cli = join(projectRoot, 'src', 'apicli');
-const configPath = join(testsDir, 'test-apis.toml');
+const configPath = join(testsDir, 'test-apis.yaml');
 const mockFetchPath = join(testsDir, 'mock-fetch.js');
 
 const run = (args, env = {}) => {
@@ -29,49 +29,48 @@ test.before(async () => {
   originalFetch = globalThis.fetch;
   await import('./mock-fetch.js');
   fs.writeFileSync(configPath, `
-[apis."httpbin.get"]
-url = "https://httpbin.org/get"
-method = "GET"
-headers = {}
+httpbin.get:
+  url: https://httpbin.org/get
+  method: GET
+  headers: {}
 
-[apis."catfact.getFact"]
-url = "https://catfact.ninja/fact"
-method = "GET"
-headers = {}
+catfact.getFact:
+  url: https://catfact.ninja/fact
+  method: GET
+  headers: {}
 
-[apis."openai.chat"]
-url = "https://api.openai.com/v1/chat/completions"
-method = "POST"
-headers = { Authorization = "Bearer $!API_KEY" }
-body = """
-{
-  "model": "$!MODEL",
-  "messages": [{"role": "user", "content": "$!PROMPT"}]
-}
-"""
+openai.chat:
+  url: https://api.openai.com/v1/chat/completions
+  method: POST
+  headers:
+    Authorization: "Bearer $!API_KEY"
+  body: |
+    {
+      "model": "$!MODEL",
+      "messages": [{"role": "user", "content": "$!PROMPT"}]
+    }
 
-[apis."openrouter.chat"]
-url = "https://openrouter.ai/api/v1/chat/completions"
-method = "POST"
-headers = { Authorization = "Bearer $!API_KEY" }
-body = """
-{
-  "model": "$!MODEL",
-  "messages": [{"role": "user", "content": "$OPTIONAL_PROMPT"}, {"role": "user", "content": "$!PROMPT"}]
-  , "provider": {"order": ["$PROVIDER"]}
-}
-"""
+openrouter.chat:
+  url: https://openrouter.ai/api/v1/chat/completions
+  method: POST
+  headers:
+    Authorization: "Bearer $!API_KEY"
+  body: |
+    {
+      "model": "$!MODEL",
+      "messages": [{"role": "user", "content": "$OPTIONAL_PROMPT"}, {"role": "user", "content": "$!PROMPT"}]
+      , "provider": {"order": ["$PROVIDER"]}
+    }
 
-[apis."cerebras.chat2"]
-url = "https://api.cerebras.ai/v1/chat/completions"
-method = "POST"
-headers = "BEARER $!CEREBRAS_API_KEY"
-body = """
-{
-  "model": "$!MODEL",
-  "messages": [{"role": "user", "content": "$!PROMPT"}]
-}
-"""
+cerebras.chat2:
+  url: https://api.cerebras.ai/v1/chat/completions
+  method: POST
+  headers: "BEARER $!CEREBRAS_API_KEY"
+  body: |
+    {
+      "model": "$!MODEL",
+      "messages": [{"role": "user", "content": "$!PROMPT"}]
+    }
   `);
 });
 
@@ -189,9 +188,9 @@ test('fetch.js - custom configPath (txt)', () => {
   }
 });
 
-test('fetch.js - custom configPath (toml)', () => {
-  const tmpPath = join(testsDir, 'tmp-apis.toml');
-  fs.writeFileSync(tmpPath, '[apis."local.test"]\nurl = "http://localhost/$VAR"\nmethod = "GET"\nheaders = {}');
+test('fetch.js - custom configPath (yaml)', () => {
+  const tmpPath = join(testsDir, 'tmp-apis.yaml');
+  fs.writeFileSync(tmpPath, 'local.test:\n  url: "http://localhost/$VAR"\n  method: "GET"\n  headers: {}');
   try {
     const item = api.getApi('local', 'test', tmpPath);
     assert.strictEqual(item.url, 'http://localhost/$VAR');
@@ -243,6 +242,7 @@ test('CLI - no args shows usage', () => {
   const r = run([]);
   assert.strictEqual(r.status, 0);
   assert.match(r.stdout, /Commands/);
+  assert.match(r.stdout, /Options/);
 });
 
 test('CLI - -h and --help show usage', () => {
@@ -265,9 +265,16 @@ test('CLI - ls with pattern', () => {
   assert.doesNotMatch(r.stdout, /catfact/);
 });
 
+test('CLI - list with pattern', () => {
+  const r = run(['-config', configPath, 'list', 'httpbin']);
+  assert.strictEqual(r.status, 0);
+  assert.match(r.stdout, /httpbin\.get/);
+  assert.doesNotMatch(r.stdout, /catfact/);
+});
+
 test('CLI - -config uses custom config', () => {
-  const tmpPath = join(testsDir, 'tmp-config.toml');
-  fs.writeFileSync(tmpPath, '[apis."custom.get"]\nurl = "https://httpbin.org/get"\nmethod = "GET"\nheaders = {}');
+  const tmpPath = join(testsDir, 'tmp-config.yaml');
+  fs.writeFileSync(tmpPath, 'custom.get:\n  url: "https://httpbin.org/get"\n  method: "GET"\n  headers: {}');
   try {
     const r = run(['-config', tmpPath, 'ls']);
     assert.strictEqual(r.status, 0);
@@ -336,4 +343,25 @@ test('CLI - -time prints duration', () => {
   assert.strictEqual(r.status, 0);
   assert.match(r.stderr, /\d+ms/);
   JSON.parse(r.stdout);
+});
+
+test('CLI - get writes API definition to local apicli.yaml', () => {
+  const outPath = join(projectRoot, 'apicli.yaml');
+  const backupPath = join(projectRoot, 'apicli.yaml.test-backup');
+  const hadOriginal = fs.existsSync(outPath);
+  if (hadOriginal) fs.copyFileSync(outPath, backupPath);
+  fs.writeFileSync(outPath, 'existing.api:\n  url: "https://example.com"\n  method: "GET"\n');
+  try {
+    const r = run(['-config', configPath, 'get', 'httpbin.get']);
+    assert.strictEqual(r.status, 0);
+    assert.match(r.stdout, /httpbin\.get/);
+    const out = Bun.YAML.parse(fs.readFileSync(outPath, 'utf8'));
+    assert.strictEqual(out['existing.api'].url, 'https://example.com');
+    assert.strictEqual(out['httpbin.get'].url, 'https://httpbin.org/get');
+    assert.strictEqual(out['httpbin.get'].method, 'GET');
+  } finally {
+    if (hadOriginal) fs.renameSync(backupPath, outPath);
+    else fs.unlinkSync(outPath);
+    if (fs.existsSync(backupPath)) fs.unlinkSync(backupPath);
+  }
 });

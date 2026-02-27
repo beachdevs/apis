@@ -1,6 +1,6 @@
 {
   "name": "apicli",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Quick and flexible API tool for CLI and Bun",
   "repository": {
     "type": "git",
@@ -15,9 +15,7 @@
   "scripts": {
     "test": "bun test"
   },
-  "dependencies": {
-    "@iarna/toml": "^3.0.0"
-  },
+  "dependencies": {},
   "author": "",
   "license": "ISC"
 }

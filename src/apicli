@@ -1,21 +1,26 @@
 #!/usr/bin/env bun
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
-import { fetchApi, getApi, getApis } from './fetch.js';
+import { dirname, join, resolve } from 'node:path';
+import { fetchApi, fetchWS, getApi, getApis, getFlow } from './fetch.js';
 import { homedir } from 'node:os';
+import { parseYaml, stringifyYaml } from './yaml.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const userDir = join(homedir(), '.apicli');
-const userTomlPath = join(userDir, 'apicli.toml');
+const userYamlPath = join(userDir, 'apicli.yaml');
 const userTxtPath = join(userDir, 'apis.txt');
 
-if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true });
-if (!fs.existsSync(userTomlPath) && !fs.existsSync(userTxtPath)) {
-  const defaultPath = join(root, 'apicli.toml');
+try {
+  if (!fs.existsSync(userDir)) fs.mkdirSync(userDir, { recursive: true });
+} catch {}
+if (!fs.existsSync(userYamlPath) && !fs.existsSync(userTxtPath)) {
+  const defaultPath = join(root, 'apicli.yaml');
   if (fs.existsSync(defaultPath)) {
-    fs.copyFileSync(defaultPath, userTomlPath);
-    try { fs.unlinkSync(defaultPath); } catch {}
+    try {
+      fs.copyFileSync(defaultPath, userYamlPath);
+      try { fs.unlinkSync(defaultPath); } catch {}
+    } catch {}
   }
 }
 
@@ -25,14 +30,15 @@ const usage = `
 🔌 ${c.bold}apicli${c.reset} ${c.dim}— call APIs (${c.cyan}./apicli${c.reset})${c.reset}
 
 ${c.bold}Commands${c.reset}
-  ${c.cyan}ls${c.reset} [pattern]            List APIs (e.g. ${c.dim}apicli ls "openrouter*"${c.reset})
+  ${c.cyan}ls|list${c.reset} [pattern]       List APIs (e.g. ${c.dim}apicli list "openrouter"${c.reset})
+  ${c.cyan}get${c.reset} <name>              Copy API definition to ${c.dim}./apicli.yaml${c.reset}
   ${c.cyan}help${c.reset} <pattern>          Show matching lines (e.g. ${c.dim}apicli help "httpbin*"${c.reset})
   ${c.green}<service.name>${c.reset} [k=v …]  Call API with optional params
 
 ${c.bold}Options${c.reset}
   ${c.cyan}-time${c.reset}                   Print request duration
   ${c.cyan}-debug${c.reset}                  Print fetch request/response info (e.g. ${c.dim}apicli -debug httpbin.get${c.reset})
-  ${c.cyan}-config${c.reset} <path>         Use custom config file (e.g. ${c.dim}apicli -config ./custom.toml httpbin.get${c.reset})
+  ${c.cyan}-config${c.reset} <path>         Use custom config file (e.g. ${c.dim}apicli -config ./custom.yaml httpbin.get${c.reset})
 
 ${c.bold}Example${c.reset}
   ${c.dim}apicli openrouter.chat API_KEY=$OPENROUTER_API_KEY MODEL=openai/gpt-4o-mini PROMPT=Hello${c.reset}
@@ -56,8 +62,12 @@ const args = rawArgs.filter((a, i) => {
 });
 const arg = args[0];
 const pattern = args[1] ?? '.';
+const cleanApiDefinition = (a) => {
+  const { id, service, name, base, step, ...rest } = a;
+  return rest;
+};
 
-const userConfigPath = () => [userTomlPath, userTxtPath].find(fs.existsSync);
+const userConfigPath = () => [userYamlPath, userTxtPath].find(fs.existsSync);
 const printConfigInfo = () => {
   const p = configPath ?? userConfigPath();
   if (p) console.error(configPath ? 'config:' : 'user:   ', p);
@@ -83,10 +93,10 @@ if (!arg || arg === '-h' || arg === '--help') {
   process.exit(0);
 }
 
-if (arg === 'ls') {
+if (arg === 'ls' || arg === 'list') {
   const re = new RegExp(pattern.replace(/\*/g, '.*'), 'i');
   for (const a of getApis(configPath)) {
-    const id = `${a.service}.${a.name}`;
+    const id = a.id ?? `${a.service}.${a.name}`;
     if (re.test(id)) console.log(id);
   }
   process.exit(0);
@@ -98,10 +108,39 @@ if (arg === 'help') {
   process.exit(0);
 }
 
+if (arg === 'get') {
+  const name = args[1];
+  if (!name) {
+    console.error('Error: get requires an API name (e.g. openai.chat)');
+    process.exit(1);
+  }
+  const match = getApis(configPath).find(a => a.id === name);
+  if (!match) {
+    console.error('Unknown API:', name);
+    process.exit(1);
+  }
+  const outPath = resolve(process.cwd(), 'apicli.yaml');
+  let outDoc = {};
+  if (fs.existsSync(outPath)) {
+    try {
+      const parsed = parseYaml(fs.readFileSync(outPath, 'utf8'));
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) outDoc = parsed;
+    } catch (err) {
+      console.error(`Invalid YAML in ${outPath}: ${err.message}`);
+      process.exit(1);
+    }
+  }
+  outDoc[name] = cleanApiDefinition(match);
+  fs.writeFileSync(outPath, stringifyYaml(outDoc), 'utf8');
+  console.log(name);
+  process.exit(0);
+}
+
 if (/^\w+\.\w+$/.test(arg)) {
   const [service, name] = arg.split('.');
-  const api = getApi(service, name, configPath);
-  if (!api) {
+  const { base, steps } = getFlow(service, name, configPath);
+  const api = base ?? getApi(service, name, configPath);
+  if (!api && steps.length === 0) {
     console.error('Unknown API:', arg);
     process.exit(1);
   }
@@ -110,8 +149,9 @@ if (/^\w+\.\w+$/.test(arg)) {
     const i = a.indexOf('=');
     if (i > 0) params[a.slice(0, i)] = a.slice(i + 1);
   }
-  const hasBodyTemplate = api.body != null && String(api.body).trim() !== '';
-  const isJsonPost = api.method === 'POST' && (() => {
+  const isWs = steps.length > 0 || (api?.url && String(api.url).startsWith('ws'));
+  const hasBodyTemplate = api?.body != null && String(api.body).trim() !== '';
+  const isJsonPost = api?.method === 'POST' && (() => {
     if (!api.headers) return false;
     if (typeof api.headers === 'string') {
       const h = api.headers.toLowerCase();
@@ -123,21 +163,31 @@ if (/^\w+\.\w+$/.test(arg)) {
     }
     return false;
   })();
-  const overrides = hasBodyTemplate
+  const overrides = isWs
     ? { vars: params, configPath }
-    : isJsonPost
-      ? { body: JSON.stringify(params), configPath }
-      : { vars: params, configPath };
+    : hasBodyTemplate
+      ? { vars: params, configPath }
+      : isJsonPost
+        ? { body: JSON.stringify(params), configPath }
+        : { vars: params, configPath };
   if (debugFlag) overrides.debug = true;
   try {
     const t0 = timeFlag ? process.hrtime.bigint() : null;
-    const response = await fetchApi(service, name, overrides);
-    const result = await response.json();
-    if (t0 != null) {
-      const ms = Number(process.hrtime.bigint() - t0) / 1e6;
-      console.error(`\x1b[90m%ims\x1b[0m`, ms.toFixed(0));
+    if (isWs) {
+      await fetchWS(service, name, { ...overrides, onMessage: (_msg, ctx) => console.log(ctx.raw) });
+      if (t0 != null) {
+        const ms = Number(process.hrtime.bigint() - t0) / 1e6;
+        console.error(`\x1b[90m%ims\x1b[0m`, ms.toFixed(0));
+      }
+    } else {
+      const response = await fetchApi(service, name, overrides);
+      const result = await response.json();
+      if (t0 != null) {
+        const ms = Number(process.hrtime.bigint() - t0) / 1e6;
+        console.error(`\x1b[90m%ims\x1b[0m`, ms.toFixed(0));
+      }
+      console.log(JSON.stringify(result, null, 2));
     }
-    console.log(JSON.stringify(result, null, 2));
   } catch (err) {
     console.error(err.message);
     process.exit(1);
@@ -145,6 +195,6 @@ if (/^\w+\.\w+$/.test(arg)) {
   process.exit(0);
 }
 
-// search apicli.toml/apis.txt
+// search apicli.yaml/apis.txt
 const re2 = new RegExp(arg.replace(/\*/g, '.*'), 'i');
 searchConfig(re2);

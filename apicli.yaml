@@ -1,0 +1,152 @@
+httpbin.get:
+  url: https://httpbin.org/get
+  method: GET
+  headers: {}
+
+catfact.getFact:
+  url: https://catfact.ninja/fact
+  method: GET
+  headers: {}
+
+openai.chat:
+  url: $!OPENAI_COMPATIBLE_BASE_URL/chat/completions
+  method: POST
+  headers:
+    Authorization: "Bearer $!OPENAI_COMPATIBLE_API_KEY"
+  body: |
+    {
+      "model": "$!MODEL",
+      "messages": [{"role": "system", "content": "$SYSTEM_PROMPT"}, {"role": "user", "content": "$!PROMPT"}]
+    }
+
+openai.models:
+  url: $!OPENAI_COMPATIBLE_BASE_URL/models
+  method: GET
+  headers:
+    Authorization: "Bearer $!OPENAI_COMPATIBLE_API_KEY"
+
+openai.responses:
+  url: wss://api.openai.com/v1/realtime?model=$!MODEL
+  headers:
+    Authorization: "Bearer $!OPENAI_COMPATIBLE_API_KEY"
+  timeout: 60
+
+openai.responses.0:
+  keep_alive: true
+  body: |
+    {
+      "type": "session.update",
+      "session": {
+        "type": "realtime",
+        "instructions": "$SYSTEM_PROMPT"
+      }
+    }
+
+openai.responses.1:
+  body: |
+    {
+      "type": "response.create",
+      "response": {
+        "instructions": "$!PROMPT"
+      }
+    }
+
+echo.ws:
+  url: wss://echo-websocket.fly.dev/.ws
+  body: $!PROMPT
+
+openrouter.chat:
+  url: https://openrouter.ai/api/v1/chat/completions
+  method: POST
+  headers:
+    Authorization: "Bearer $!API_KEY"
+  body: |
+    {
+      "model": "$!MODEL",
+      "messages": [{"role": "user", "content": "$OPTIONAL_PROMPT"}, {"role": "user", "content": "$!PROMPT"}]
+      , "provider": {"order": ["$PROVIDER"]}
+    }
+
+cloudflare.sites:
+  url: https://api.cloudflare.com/client/v4/accounts/$!CLOUDFLARE_ACCOUNT_ID/rum/site_info/list
+  method: GET
+  headers:
+    Authorization: "Bearer $!CLOUDFLARE_ACCT_TOKEN"
+
+cloudflare.analytics:
+  url: https://api.cloudflare.com/client/v4/graphql
+  method: POST
+  headers:
+    Authorization: "Bearer $!CLOUDFLARE_ACCT_TOKEN"
+    Content-Type: application/json
+  body: |
+    {
+      "query": "query ($$account: String!, $$start: String!, $$end: String!, $$site: String!) { viewer { accounts(filter: { accountTag: $$account }) { rumPageloadEventsAdaptiveGroups(limit: 100, filter: { siteTag: $$site, datetime_geq: $$start, datetime_leq: $$end }) { dimensions { date } sum { visits } count } } } }",
+      "variables": {
+        "account": "$!CLOUDFLARE_ACCOUNT_ID",
+        "start": "$!START_DATE",
+        "end": "$!END_DATE",
+        "site": "$!SITE_TAG"
+      }
+    }
+
+cloudflare.zones:
+  url: https://api.cloudflare.com/client/v4/zones
+  method: GET
+  headers:
+    Authorization: "Bearer $!CLOUDFLARE_ACCT_TOKEN"
+
+cloudflare.dnsList:
+  url: https://api.cloudflare.com/client/v4/zones/$!ZONE_ID/dns_records
+  method: GET
+  headers:
+    Authorization: "Bearer $!CLOUDFLARE_ACCT_TOKEN"
+
+cloudflare.dnsCreate:
+  url: https://api.cloudflare.com/client/v4/zones/$!ZONE_ID/dns_records
+  method: POST
+  headers:
+    Authorization: "Bearer $!CLOUDFLARE_ACCT_TOKEN"
+    Content-Type: application/json
+  body: |
+    {
+      "type": "$!TYPE",
+      "name": "$!NAME",
+      "content": "$!CONTENT"
+    }
+
+cloudflare.cachePurgeAll:
+  url: https://api.cloudflare.com/client/v4/zones/$!ZONE_ID/purge_cache
+  method: POST
+  headers:
+    Authorization: "Bearer $!CLOUDFLARE_ACCT_TOKEN"
+    Content-Type: application/json
+  body: |
+    { "purge_everything": true }
+
+cloudflare.cachePurgeFiles:
+  url: https://api.cloudflare.com/client/v4/zones/$!ZONE_ID/purge_cache
+  method: POST
+  headers:
+    Authorization: "Bearer $!CLOUDFLARE_ACCT_TOKEN"
+    Content-Type: application/json
+  body: |
+    { "files": $!FILES_JSON }
+
+cloudflare.workersRoutes:
+  url: https://api.cloudflare.com/client/v4/zones/$!ZONE_ID/workers/routes
+  method: GET
+  headers:
+    Authorization: "Bearer $!CLOUDFLARE_ACCT_TOKEN"
+
+cloudflare.workersRouteCreate:
+  url: https://api.cloudflare.com/client/v4/zones/$!ZONE_ID/workers/routes
+  method: POST
+  headers:
+    Authorization: "Bearer $!CLOUDFLARE_ACCT_TOKEN"
+    Content-Type: application/json
+  body: |
+    {
+      "pattern": "$!PATTERN",
+      "script": "$!SCRIPT"
+    }

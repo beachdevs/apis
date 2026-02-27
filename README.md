@@ -10,24 +10,30 @@ A quick and flexible API tool for calling services from the command line or as a
 npm -g install beachdevs/apicli
 ```
 
-This installs the latest release globally. On first run, `apicli` copies the package `apicli.toml` into `~/.apicli/apicli.toml` if no user config exists.
+This installs the latest release globally. On first run, `apicli` copies the package `apicli.yaml` into `~/.apicli/apicli.yaml` if no user config exists.
 
 ## CLI Usage
 
-A single `apicli.toml` (either the default copied into `~/.apicli/apicli.toml` or a custom one passed via `-config <path>`) defines all APIs. Run `apicli` with no arguments to print the effective config path before any other output.
+A single `apicli.yaml` (either the default copied into `~/.apicli/apicli.yaml` or a custom one passed via `-config <path>`) defines all APIs. Run `apicli` with no arguments to print the effective config path before any other output.
 
-**Options:** `-time` — print request duration; `-debug` — print fetch request/response info to stderr; `-config <path>` — use a custom `.toml` file.
+**Options:** `-time` — print request duration; `-debug` — print fetch request/response info to stderr; `-config <path>` — use a custom `.yaml` file.
 
 ```bash
 # List all available APIs
 apicli ls
 
+# Alias for ls
+apicli list openai
+
 # Filter APIs
 apicli ls httpbin
 
+# Copy one API definition into ./apicli.yaml
+apicli get httpbin.get
+
 # Use a custom config file
-apicli -config ./custom.toml ls
-apicli -config ~/my-apis.toml httpbin.get
+apicli -config ./custom.yaml ls
+apicli -config ~/my-apis.yaml httpbin.get
 
 # Show matching lines from config
 apicli help httpbin
@@ -77,9 +83,9 @@ const res = await fetchApi('openai', 'chat', {
   }
 });
 
-// Custom config file (apicli.toml)
+// Custom config file (apicli.yaml)
 const customData = await fetchApi('my-service', 'my-name', {
-  configPath: './custom.toml'
+  configPath: './custom.yaml'
 });
 const customJson = await customData.json();
 
@@ -90,21 +96,24 @@ const data2 = await res2.json();
 
 ## Configuration
 
-### apicli.toml
+### apicli.yaml
 
-Each API is a section keyed by `service.name`. Use `$VAR` (optional) or `!$VAR` (required) for variable substitution. Use `BEARER !$TOKEN` in `headers` as shorthand for `Authorization: Bearer` + `Content-Type: application/json`.
+Each API is a top-level key named `service.name` (no root object). Use `$VAR` (optional) or `$!VAR` (required) for variable substitution. Use `BEARER $!TOKEN` in `headers` as shorthand for `Authorization: Bearer` + `Content-Type: application/json`.
 
-```toml
-[apis."httpbin.get"]
-url = "https://httpbin.org/get"
-method = "GET"
-headers = {}
+```yaml
+httpbin.get:
+  url: https://httpbin.org/get
+  method: GET
+  headers: {}
 
-[apis."openai.chat"]
-url = "https://api.openai.com/v1/chat/completions"
-method = "POST"
-headers = { Authorization = "Bearer !$API_KEY", "Content-Type" = "application/json" }
-body = """{"model": "!$MODEL", "messages": [{"role": "user", "content": "!$PROMPT"}]}"""
+openai.chat:
+  url: https://api.openai.com/v1/chat/completions
+  method: POST
+  headers:
+    Authorization: "Bearer $!API_KEY"
+    Content-Type: application/json
+  body: |
+    {"model":"$!MODEL","messages":[{"role":"user","content":"$!PROMPT"}]}
 ```
 
 OpenRouter supports optional `$PROVIDER` to prefer a specific provider (e.g. `order: ["openai"]`).
