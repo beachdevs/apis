@@ -38,7 +38,7 @@ ${c.bold}Commands${c.reset}
 ${c.bold}Options${c.reset}
   ${c.cyan}-time${c.reset}                   Print request duration
   ${c.cyan}-debug${c.reset}                  Print fetch request/response info (e.g. ${c.dim}apicli -debug httpbin.get${c.reset})
-  ${c.cyan}-config${c.reset} <path>         Use custom config file (e.g. ${c.dim}apicli -config ./custom.yaml httpbin.get${c.reset})
+  ${c.cyan}-config${c.reset} <path>          Use custom config file (e.g. ${c.dim}apicli -config ./custom.yaml httpbin.get${c.reset})
 
 ${c.bold}Example${c.reset}
   ${c.dim}apicli openrouter.chat API_KEY=$OPENROUTER_API_KEY MODEL=openai/gpt-4o-mini PROMPT=Hello${c.reset}
